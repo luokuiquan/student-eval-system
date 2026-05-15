@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: student-eval-system
+    runtime: node
+    repo: https://github.com/luokuiquan/student-eval-system
+    branch: main
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: RENDER
+        value: true
+      - key: NODE_ENV
+        value: production
