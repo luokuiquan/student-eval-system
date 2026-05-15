@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生评价报告 · 管理后台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1a5c8e;--primary-light:#e8f4fd;--primary-dark:#134566;
+  --success:#27ae60;--danger:#e74c3c;--warning:#e67e22;--purple:#8e44ad;
+  --border:#d0dce8;--bg:#f0f4f8;--card:#fff;--text:#2c3e50;--label:#6c7a8d;
+  --sidebar:240px;
+}
+body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+
+/* 顶栏 */
+.topbar{background:var(--primary);color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15);position:sticky;top:0;z-index:100;flex-shrink:0}
+.topbar h1{font-size:17px;font-weight:600;letter-spacing:.5px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar a{color:rgba(255,255,255,.8);font-size:13px;text-decoration:none;padding:6px 12px;border:1px solid rgba(255,255,255,.4);border-radius:6px;transition:.2s}
+.topbar a:hover{background:rgba(255,255,255,.15)}
+#refreshBtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;transition:.2s}
+#refreshBtn:hover{background:rgba(255,255,255,.25)}
+
+/* 布局 */
+.layout{display:flex;flex:1;min-height:0}
+.sidebar{width:var(--sidebar);background:var(--card);border-right:1px solid var(--border);padding:16px 0;flex-shrink:0;overflow-y:auto}
+.content{flex:1;overflow:auto;padding:20px}
+
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;font-size:14px;cursor:pointer;transition:.15s;color:var(--label)}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--primary-light);color:var(--primary);font-weight:600;border-right:3px solid var(--primary)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-section{font-size:11px;color:var(--label);padding:14px 20px 4px;text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+
+/* 卡片 */
+.card{background:var(--card);border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid var(--border)}
+.card-title{font-size:15px;font-weight:600;color:var(--primary);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+
+/* 统计卡片 */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:var(--card);border-radius:12px;padding:18px 20px;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-num{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px}
+.stat-label{font-size:13px;color:var(--label)}
+.c-blue{color:var(--primary)}
+.c-green{color:var(--success)}
+.c-orange{color:var(--warning)}
+.c-purple{color:var(--purple)}
+
+/* 筛选栏 */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar input,.filter-bar select{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;transition:.2s;background:#fff}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--primary)}
+.filter-bar input{flex:1;min-width:180px}
+.btn{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:.2s;font-family:inherit}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:6px}
+.btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+
+/* 表格 */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:13px}
+th{background:#f7f9fc;color:var(--label);font-weight:600;padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid #f0f4f8;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafcff}
+.tag{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap}
+.tag-excellent{background:var(--purple)}
+.tag-pass{background:var(--success)}
+.tag-basic{background:var(--warning)}
+.tag-fail{background:var(--danger)}
+.tag-default{background:var(--label)}
+.row-actions{display:flex;gap:6px;align-items:center}
+
+/* 分页 */
+.pagination{display:flex;gap:6px;align-items:center;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
+.page-btn{width:32px;height:32px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.page-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.page-btn:hover:not(.active){border-color:var(--primary);color:var(--primary)}
+.page-info{font-size:12px;color:var(--label);padding:0 8px}
+
+/* ── 报告预览弹层 ── */
+.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px}
+.modal-mask.show{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:820px;min-height:200px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2);margin:auto}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--primary);color:#fff;position:sticky;top:0;z-index:5}
+.modal-title{font-size:16px;font-weight:600}
+.modal-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:rgba(255,255,255,.35)}
+.modal-body{padding:24px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+
+/* 报告样式（modal内） */
+.rpt-cover{background:linear-gradient(135deg,#1a3a5c,#1a5c8e);color:#fff;padding:40px 32px;text-align:center}
+.rpt-cover h2{font-size:24px;font-weight:700;letter-spacing:2px;margin-bottom:4px}
+.rpt-cover h3{font-size:18px;font-weight:400;opacity:.9;margin-bottom:24px}
+.rpt-cover-info{font-size:13px;line-height:2.2;opacity:.85}
+.rpt-toc{padding:20px 24px;border-bottom:1px solid #eee}
+.rpt-toc h3{font-size:16px;font-weight:600;margin-bottom:12px}
+.rpt-toc-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dotted var(--border);font-size:12px}
+.rpt-section{padding:20px 24px;border-bottom:1px solid #f0f4f8}
+.rpt-section:last-child{border-bottom:none}
+.rpt-section h3{font-size:16px;font-weight:600;color:var(--primary);margin-bottom:3px}
+.rpt-section .desc{font-size:11px;color:var(--label);margin-bottom:12px;padding-bottom:8px;border-bottom:1px dashed var(--border)}
+.rpt-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.rpt-meta-item{font-size:12px;padding:6px 10px;background:#f7f9fc;border-radius:6px;flex:1;min-width:160px}
+.rpt-meta-item span{color:var(--label)}
+.rpt-scores{margin-bottom:10px}
+.rpt-score-row{display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #f7f9fc}
+.rpt-score-name{font-size:13px;flex:1}
+.rpt-stars{color:#f1c40f;font-size:15px}
+.rpt-score-tag{padding:1px 10px;border-radius:20px;font-size:11px;font-weight:600;color:#fff}
+.rpt-text{background:#f9fbff;border-left:3px solid var(--primary);padding:10px 12px;border-radius:0 8px 8px 0;font-size:13px;line-height:1.8;color:var(--text);margin-bottom:10px}
+.rpt-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.rpt-photo-item{border-radius:8px;overflow:hidden}
+.rpt-photo-item img{width:100%;height:90px;object-fit:cover;display:block}
+.rpt-photo-caption{background:var(--primary);color:#fff;font-size:10px;padding:3px 6px;text-align:center}
+.rpt-sign{padding:16px 24px;text-align:right;font-size:13px;color:var(--label);line-height:2.2}
+
+/* 视图切换 */
+.view{display:none}
+.view.active{display:block}
+
+/* 空状态 */
+.empty{text-align:center;padding:60px 20px;color:var(--label)}
+.empty-icon{font-size:48px;margin-bottom:12px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:9999}
+.toast.show{opacity:1}
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media print{
+  .topbar,.sidebar,.modal-header,.modal-footer,.filter-bar,.stat-grid{display:none!important}
+  .modal-mask{position:static!important;padding:0!important}
+  .modal{box-shadow:none!important;border-radius:0!important}
+}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <h1>🎓 学生评价管理后台</h1>
+  <div class="topbar-right">
+    <a href="/teacher" target="_blank">📱 打开教师端</a>
+    <button id="refreshBtn" onclick="loadAll()">🔄 刷新</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- 侧边导航 -->
+  <div class="sidebar">
+    <div class="nav-section">数据管理</div>
+    <div class="nav-item active" onclick="switchView('list')"><span class="nav-icon">📋</span>所有评价</div>
+    <div class="nav-item" onclick="switchView('students')"><span class="nav-icon">👥</span>按学生汇总</div>
+    <div class="nav-section">系统</div>
+    <div class="nav-item" onclick="switchView('about')"><span class="nav-icon">ℹ️</span>使用说明</div>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="content">
+
+    <!-- ── 统计卡片 ── -->
+    <div class="stat-grid" id="statGrid">
+      <div class="stat-card"><div class="stat-num c-blue" id="s-total">-</div><div class="stat-label">评价总数</div></div>
+      <div class="stat-card"><div class="stat-num c-green" id="s-students">-</div><div class="stat-label">已评学生</div></div>
+      <div class="stat-card"><div class="stat-num c-orange" id="s-teachers">-</div><div class="stat-label">参与教师</div></div>
+      <div class="stat-card"><div class="stat-num c-purple" id="s-today">-</div><div class="stat-label">今日提交</div></div>
+    </div>
+
+    <!-- ── 视图：所有评价 ── -->
+    <div class="view active" id="view-list">
+      <div class="card">
+        <div class="card-title">
+          <span>所有评价记录</span>
+          <button class="btn btn-primary btn-sm" onclick="exportCSV()">📥 导出 CSV</button>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="filterName" placeholder="搜索学生姓名…" oninput="renderTable()">
+          <select id="filterClass" onchange="renderTable()">
+            <option value="">全部班级</option>
+          </select>
+          <select id="filterLevel" onchange="renderTable()">
+            <option value="">全部评级</option>
+            <option>优秀</option><option>达标</option><option>基本达标</option><option>未达标</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>学生姓名</th><th>班级</th><th>授课题目</th>
+                <th>评价教师</th><th>日期</th><th>单项评级</th><th>整体评级</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <!-- ── 视图：按学生汇总 ── -->
+    <div class="view" id="view-students">
+      <div class="card">
+        <div class="card-title">按学生汇总</div>
+        <div class="filter-bar">
+          <input type="text" id="filterStudentQ" placeholder="搜索学生姓名…" oninput="renderStudentGrid()">
+        </div>
+        <div id="studentGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- ── 视图：使用说明 ── -->
+    <div class="view" id="view-about">
+      <div class="card">
+        <div class="card-title">使用说明</div>
+        <div style="font-size:14px;line-height:2;color:var(--text)">
+          <p><strong>教师端（手机）</strong></p>
+          <p style="color:var(--label)">老师用手机扫码或直接访问 <code style="background:#f0f4f8;padding:2px 6px;border-radius:4px">http://[电脑IP]:3000/teacher</code></p>
+          <br>
+          <p><strong>管理后台（PC）</strong></p>
+          <p style="color:var(--label)">在电脑浏览器访问 <code style="background:#f0f4f8;padding:2px 6px;border-radius:4px">http://localhost:3000/admin</code></p>
+          <br>
+          <p><strong>生成 PDF 报告</strong></p>
+          <p style="color:var(--label)">点击任意学生的"查看报告"→弹出完整报告→点击"打印/导出PDF"→浏览器打印对话框选择"另存为PDF"</p>
+          <br>
+          <p><strong>导出数据</strong></p>
+          <p style="color:var(--label)">点击"导出CSV"可将所有评价数据保存为 Excel 可打开的表格文件</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /layout -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ── 报告预览弹层 ── -->
+<div class="modal-mask" id="reportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">评价报告</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">关闭</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ 打印 / 导出 PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allData = [];
+let curPage2 = 1;
+const PAGE_SIZE = 15;
+
+// ── 初始化 ──
+async function loadAll() {
+  try {
+    const [listResp, statsResp] = await Promise.all([
+      fetch('/api/evaluations'), fetch('/api/stats')
+    ]);
+    const listData = await listResp.json();
+    const statsData = await statsResp.json();
+    if(listData.ok) allData = listData.list;
+    // 统计
+    if(statsData.ok) {
+      set('s-total', statsData.total);
+      set('s-students', statsData.studentCount);
+      set('s-teachers', statsData.teacherCount);
+      const today = new Date().toISOString().split('T')[0];
+      set('s-today', allData.filter(e=>e.submittedAt&&e.submittedAt.startsWith(today)).length);
+    }
+    // 班级筛选项
+    const classes = [...new Set(allData.map(e=>e.studentClass).filter(Boolean))];
+    const sel = document.getElementById('filterClass');
+    sel.innerHTML = '<option value="">全部班级</option>' + classes.map(c=>`<option>${c}</option>`).join('');
+    renderTable();
+    renderStudentGrid();
+  } catch(e) {
+    showToast('加载失败：'+e.message);
+  }
+}
+
+// ── 表格渲染 ──
+function getFiltered() {
+  const q = (document.getElementById('filterName')?.value||'').trim().toLowerCase();
+  const cls = document.getElementById('filterClass')?.value||'';
+  const lv = document.getElementById('filterLevel')?.value||'';
+  return allData.filter(e => {
+    if(q && !e.studentName?.toLowerCase().includes(q)) return false;
+    if(cls && e.studentClass !== cls) return false;
+    if(lv && e.overallLevel !== lv && e.singleLevel !== lv) return false;
+    return true;
+  });
+}
+
+function renderTable() {
+  const filtered = getFiltered();
+  const total = filtered.length;
+  const maxPage = Math.ceil(total/PAGE_SIZE)||1;
+  if(curPage2 > maxPage) curPage2 = 1;
+  const paged = filtered.slice((curPage2-1)*PAGE_SIZE, curPage2*PAGE_SIZE);
+
+  const tbody = document.getElementById('tableBody');
+  if(!paged.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">📭</div>暂无数据</div></td></tr>`;
+  } else {
+    tbody.innerHTML = paged.map((e,i)=>`
+      <tr>
+        <td style="color:var(--label)">${(curPage2-1)*PAGE_SIZE+i+1}</td>
+        <td><strong>${e.studentName||'-'}</strong>${e.studentNo?' <span style="color:var(--label);font-size:11px">('+e.studentNo+')</span>':''}</td>
+        <td>${e.studentClass||'-'}</td>
+        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.courseTitle||'-'}</td>
+        <td>${e.teacherName||'-'}</td>
+        <td style="color:var(--label)">${(e.evalDate||e.submittedAt||'').slice(0,10)}</td>
+        <td>${levelTag(e.singleLevel)}</td>
+        <td>${levelTag(e.overallLevel)}</td>
+        <td class="row-actions">
+          <button class="btn btn-primary btn-sm" onclick="viewReport('${e.id}')">查看报告</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteRecord('${e.id}')">删除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  renderPagination(maxPage, total);
+}
+
+function renderPagination(maxPage, total) {
+  const pg = document.getElementById('pagination');
+  let html = `<span class="page-info">共 ${total} 条</span>`;
+  for(let i=1;i<=maxPage;i++) {
+    html += `<button class="page-btn${i===curPage2?' active':''}" onclick="goTable(${i})">${i}</button>`;
+  }
+  pg.innerHTML = html;
+}
+function goTable(n){ curPage2=n; renderTable(); }
+
+// ── 学生汇总 ──
+function renderStudentGrid() {
+  const q = (document.getElementById('filterStudentQ')?.value||'').toLowerCase();
+  const byStudent = {};
+  allData.forEach(e=>{
+    const key = (e.studentName||'')+'|'+(e.studentClass||'');
+    if(!byStudent[key]) byStudent[key]={name:e.studentName,cls:e.studentClass,records:[]};
+    byStudent[key].records.push(e);
+  });
+  const grid = document.getElementById('studentGrid');
+  const entries = Object.values(byStudent).filter(s=>!q||s.name?.toLowerCase().includes(q));
+  if(!entries.length) { grid.innerHTML=`<div class="empty"><div class="empty-icon">👥</div>暂无学生数据</div>`; return; }
+  grid.innerHTML = entries.map(s=>{
+    const last = s.records[s.records.length-1];
+    return `<div class="card" style="cursor:pointer" onclick="viewStudentReports('${s.name}','${s.cls}')">
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px">${s.name||'-'}</div>
+      <div style="font-size:12px;color:var(--label);margin-bottom:10px">${s.cls||'-'} · ${s.records.length} 条评价</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${s.records.slice(-3).map(r=>`<span style="font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:20px">${(r.evalDate||r.submittedAt||'').slice(0,10)}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;display:flex;gap:6px">${levelTag(last?.overallLevel)} <span style="font-size:11px;color:var(--label);align-self:center">最新整体评级</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ── 查看报告 ──
+async function viewReport(id) {
+  try {
+    const resp = await fetch('/api/evaluation/'+id);
+    const data = await resp.json();
+    if(!data.ok) { showToast('加载失败'); return; }
+    renderReportModal(data.record);
+  } catch(e){ showToast('网络错误'); }
+}
+
+function viewStudentReports(name, cls) {
+  // 弹出该学生所有评价的汇总
+  const records = allData.filter(e=>e.studentName===name&&e.studentClass===cls);
+  document.getElementById('modalTitle').textContent = `${name} · 评价汇总 (${records.length}条)`;
+  let html = records.map(r=>`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong>${r.courseTitle||'课程'}</strong>
+        <span style="font-size:12px;color:var(--label)">${r.evalDate||r.submittedAt?.slice(0,10)||''} · ${r.teacherName||''}</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <span>单项：${levelTag(r.singleLevel)}</span>
+        <span>整体：${levelTag(r.overallLevel)}</span>
+        <button class="btn btn-primary btn-sm" onclick="viewReport('${r.id}')" style="margin-left:auto">查看完整报告</button>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('modalBody').innerHTML = html || '<p style="color:var(--label)">暂无记录</p>';
+  document.querySelector('.modal-mask').classList.add('show');
+}
+
+async function renderReportModal(rec) {
+  const d = rec;
+  const sn = d.student?.name||'';
+  document.getElementById('modalTitle').textContent = `${sn} · 评价报告`;
+  const stars = n => '★'.repeat(n)+'☆'.repeat(5-n);
+  const tagColor = l => ({优秀:'#8e44ad',达标:'#27ae60',基本达标:'#e67e22',未达标:'#e74c3c'}[l]||'#888');
+  const renderScores = (scoresObj)=>{
+    if(!scoresObj) return '';
+    return Object.entries(scoresObj).map(([k,v])=>`
+      <div class="rpt-score-row">
+        <span class="rpt-score-name">${k}</span>
+        <span class="rpt-stars">${stars(v)}</span>
+        <span class="rpt-score-tag" style="background:${tagColor(null)};background:${v>=4?'#27ae60':v>=3?'#3498db':'#e67e22'}">${v}星</span>
+      </div>`).join('');
+  };
+  const renderPhotos = (arr)=>{
+    if(!arr||!arr.length) return '<div style="color:var(--label);font-size:12px;padding:8px 0">暂无图片</div>';
+    return `<div class="rpt-photos">${arr.map(p=>`<div class="rpt-photo-item"><img src="${p.src}"><div class="rpt-photo-caption">${p.caption||'照片'}</div></div>`).join('')}</div>`;
+  };
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="rpt-cover">
+      <div style="font-size:12px;opacity:.7;margin-bottom:12px">课堂学习评价报告</div>
+      <h2>学生课堂学习</h2>
+      <h3>评价报告</h3>
+      <div class="rpt-cover-info">
+        <div>授课题目：${d.courseTitle||'—'}</div>
+        <div>评价学生班级：${d.student?.class||'—'}</div>
+        <div>评价学生姓名：${sn}${d.student?.no?' ('+d.student.no+')':''}</div>
+        <div>评价时间：${d.evalDate||'—'}</div>
+        <div>评价教师：${d.teacherName||'—'}</div>
+      </div>
+    </div>
+
+    <div class="rpt-toc">
+      <h3>目录</h3>
+      <div class="rpt-toc-item"><span>单项评价</span><span>1</span></div>
+      <div class="rpt-toc-item"><span>单项评价的证据一（课堂观察）</span><span>2</span></div>
+      <div class="rpt-toc-item"><span>单项评价的证据二（实验数据）</span><span>3</span></div>
+      <div class="rpt-toc-item"><span>整体评价</span><span>4</span></div>
+      <div class="rpt-toc-item"><span>整体评价的证据一（课堂观察）</span><span>5</span></div>
+      <div class="rpt-toc-item"><span>整体评价的证据二（学习任务单）</span><span>6</span></div>
+      <div class="rpt-toc-item"><span>整体评价的证据三（课后交流）</span><span>7</span></div>
+    </div>
+
+    <div class="rpt-section">
+      <h3>单项评价</h3>
+      <div class="desc">评价说明：聚焦学生学习行为，教师对学生的单项评价</div>
+      <div class="rpt-meta">
+        <div class="rpt-meta-item"><span>评价环节：</span>${d.singleEval?.env||'—'}</div>
+        <div class="rpt-meta-item"><span>评价证据：</span>${d.singleEval?.evidence||'—'}</div>
+        <div class="rpt-meta-item"><span>评价学生：</span>${sn}</div>
+        <div class="rpt-meta-item"><span>综合评级：</span><strong style="color:${tagColor(d.singleEval?.level)}">${d.singleEval?.level||'—'}</strong></div>
+      </div>
+      <div class="rpt-scores">${renderScores(d.singleEval?.scores)}</div>
+      <div class="rpt-text">${d.singleEval?.comment||'（暂无评语）'}</div>
+    </div>
+
+    <div class="rpt-section">
+      <h3>单项评价的证据一</h3>
+      <div class="desc">评价证据：课堂观察</div>
+      ${renderPhotos(d.photos?.['single-obs'])}
+    </div>
+
+    <div class="rpt-section">
+      <h3>单项评价的证据二</h3>
+      <div class="desc">评价证据：实验数据、学生过程评价</div>
+      ${renderPhotos(d.photos?.['single-data'])}
+    </div>
+
+    <div class="rpt-section">
+      <h3>整体评价</h3>
+      <div class="desc">评价说明：学完这节课后，教师对学生整节课核心素养达成情况的整体性评价</div>
+      <div class="rpt-meta">
+        <div class="rpt-meta-item"><span>评价学生：</span>${sn}</div>
+        <div class="rpt-meta-item"><span>评价证据：</span>${d.overallEval?.evidence||'—'}</div>
+        <div class="rpt-meta-item"><span>综合评级：</span><strong style="color:${tagColor(d.overallEval?.level)}">${d.overallEval?.level||'—'}</strong></div>
+      </div>
+      <div class="rpt-scores">${renderScores(d.overallEval?.scores)}</div>
+      <div class="rpt-text">${d.overallEval?.comment||'（暂无评语）'}</div>
+    </div>
+
+    <div class="rpt-section">
+      <h3>整体评价的证据一</h3>
+      <div class="desc">评价证据：课堂观察</div>
+      ${renderPhotos(d.photos?.['overall-obs'])}
+    </div>
+
+    <div class="rpt-section">
+      <h3>整体评价的证据二</h3>
+      <div class="desc">评价证据：学习任务单</div>
+      ${renderPhotos(d.photos?.['overall-task'])}
+    </div>
+
+    <div class="rpt-section">
+      <h3>整体评价的证据三</h3>
+      <div class="desc">评价证据：师生课后交流、目标检测单</div>
+      ${d.overallEval?.afterClassNote?`<div class="rpt-text">${d.overallEval.afterClassNote}</div>`:''}
+      ${renderPhotos(d.photos?.['overall-after'])}
+    </div>
+
+    <div class="rpt-sign">
+      <div>评价教师：<strong>${d.teacherName||'—'}</strong></div>
+      <div>评价时间：<strong>${d.evalDate||'—'}</strong></div>
+    </div>
+  `;
+  document.querySelector('.modal-mask').classList.add('show');
+}
+
+function closeModal() { document.querySelector('.modal-mask').classList.remove('show'); }
+
+// ── 删除 ──
+async function deleteRecord(id) {
+  if(!confirm('确定删除这条评价记录吗？')) return;
+  const resp = await fetch('/api/evaluation/'+id, {method:'DELETE'});
+  const data = await resp.json();
+  if(data.ok){ showToast('已删除'); loadAll(); }
+  else showToast('删除失败');
+}
+
+// ── 导出CSV ──
+function exportCSV() {
+  const headers = ['ID','学生姓名','学号','班级','授课题目','评价教师','评价日期','单项评级','整体评级','单项评语','整体评语','提交时间'];
+  const rows = allData.map(e=>[
+    e.id, e.studentName||'', e.studentNo||'', e.studentClass||'',
+    e.courseTitle||'', e.teacherName||'', e.evalDate||'',
+    e.singleLevel||'', e.overallLevel||'', '', '', e.submittedAt||''
+  ]);
+  const csv = [headers, ...rows].map(r=>r.map(c=>'"'+(String(c).replace(/"/g,'""'))+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `评价数据_${new Date().toLocaleDateString('zh')}.csv`;
+  a.click();
+  showToast('CSV 已下载');
+}
+
+// ── 工具函数 ──
+function levelTag(l) {
+  const cls = {优秀:'tag-excellent',达标:'tag-pass',基本达标:'tag-basic',未达标:'tag-fail'}[l]||'tag-default';
+  return l ? `<span class="tag ${cls}">${l}</span>` : '<span style="color:var(--label)">-</span>';
+}
+function set(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const v=document.getElementById('view-'+name); if(v) v.classList.add('active');
+  document.querySelector(`.nav-item[onclick*="${name}"]`)?.classList.add('active');
+}
+
+// 点击弹层背景关闭
+document.querySelector('.modal-mask').addEventListener('click', e => {
+  if(e.target === document.querySelector('.modal-mask')) closeModal();
+});
+
+// 初始加载
+loadAll();
+// 每30秒自动刷新
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>
