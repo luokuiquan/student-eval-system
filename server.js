@@ -1,6 +1,7 @@
 /**
  * 学生课堂学习评价系统 - 后端服务
  * Node.js 原生 HTTP，无需安装额外依赖
+ * 支持本地部署和云部署（Render等）
  */
 const http = require('http');
 const fs = require('fs');
@@ -13,18 +14,40 @@ const DATA_FILE = path.join(DATA_DIR, 'evaluations.json');
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// ── 确保数据目录和文件存在 ──
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify({ evaluations: [], courseInfo: {} }, null, 2), 'utf8');
+// ── 内存数据库（云部署时使用） ──
+let memoryDB = { evaluations: [], courseInfo: {} };
+
+// ── 判断是否为云部署环境 ──
+const IS_CLOUD = !!process.env.RENDER || !!process.env.RAILWAY_ENVIRONMENT || !!process.env.VERCEL;
+
+// ── 确保数据目录和文件存在（本地部署） ──
+if (!IS_CLOUD) {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify({ evaluations: [], courseInfo: {} }, null, 2), 'utf8');
+  }
 }
 
 // ── 读写数据库 ──
 function readDB() {
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  if (IS_CLOUD) return memoryDB;
+  try {
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  } catch(e) {
+    return { evaluations: [], courseInfo: {} };
+  }
 }
 function writeDB(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+  if (IS_CLOUD) {
+    memoryDB = data;
+    return;
+  }
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch(e) {
+    console.error('写入数据失败:', e.message);
+  }
 }
 
 // ── MIME 映射 ──
@@ -39,14 +62,26 @@ const MIME = {
   '.ico': 'image/x-icon'
 };
 
-// ── 解析请求体 ──
-function parseBody(req) {
+// ── 解析请求体（支持大文件上传） ──
+function parseBody(req, maxMB = 50) {
   return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => body += chunk);
+    let body = [];
+    let size = 0;
+    const maxSize = maxMB * 1024 * 1024;
+    req.on('data', chunk => {
+      size += chunk.length;
+      if (size > maxSize) {
+        reject(new Error('请求体过大'));
+        req.destroy();
+        return;
+      }
+      body.push(chunk);
+    });
     req.on('end', () => {
-      try { resolve(JSON.parse(body || '{}')); }
-      catch(e) { reject(e); }
+      try {
+        const str = Buffer.concat(body).toString('utf8');
+        resolve(JSON.parse(str || '{}'));
+      } catch(e) { reject(e); }
     });
     req.on('error', reject);
   });
@@ -54,13 +89,15 @@ function parseBody(req) {
 
 // ── JSON 响应辅助 ──
 function json(res, code, data) {
+  const body = JSON.stringify(data);
   res.writeHead(code, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Content-Length': Buffer.byteLength(body)
   });
-  res.end(JSON.stringify(data));
+  res.end(body);
 }
 
 // ── 静态文件服务 ──
@@ -92,10 +129,15 @@ const server = http.createServer(async (req, res) => {
 
   // ── API 路由 ──
 
+  // GET /api/health — 健康检查
+  if (pathname === '/api/health' && method === 'GET') {
+    return json(res, 200, { ok: true, time: new Date().toISOString(), cloud: IS_CLOUD });
+  }
+
   // POST /api/evaluate — 提交评价
   if (pathname === '/api/evaluate' && method === 'POST') {
     try {
-      const body = await parseBody(req);
+      const body = await parseBody(req, 50);
       const db = readDB();
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
       const record = {
@@ -178,6 +220,30 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // GET /api/export — 导出全部数据（备份用）
+  if (pathname === '/api/export' && method === 'GET') {
+    const db = readDB();
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': 'attachment; filename=evaluations-backup-' + new Date().toISOString().slice(0,10) + '.json'
+    });
+    return res.end(JSON.stringify(db, null, 2));
+  }
+
+  // POST /api/import — 导入数据（恢复用）
+  if (pathname === '/api/import' && method === 'POST') {
+    try {
+      const body = await parseBody(req, 100);
+      if (!body.evaluations || !Array.isArray(body.evaluations)) {
+        return json(res, 400, { ok: false, error: '无效的数据格式' });
+      }
+      writeDB(body);
+      return json(res, 200, { ok: true, count: body.evaluations.length });
+    } catch(e) {
+      return json(res, 400, { ok: false, error: e.message });
+    }
+  }
+
   // ── 静态文件服务 ──
   let filePath;
   if (pathname === '/' || pathname === '/teacher') {
@@ -195,5 +261,6 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`📱 老师端（手机）: http://[本机IP]:${PORT}/teacher`);
   console.log(`🖥️  管理后台（PC）: http://[本机IP]:${PORT}/admin`);
+  console.log(`☁️  云部署模式: ${IS_CLOUD ? '是' : '否'}`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 });
