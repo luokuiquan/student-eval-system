@@ -1,0 +1,16 @@
+{
+  "name": "student-eval-system",
+  "version": "1.0.0",
+  "description": "学生课堂学习评价系统 - 多教师拍照评价、管理后台、报告导出",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "localtunnel": "^2.0.2"
+  }
+}
