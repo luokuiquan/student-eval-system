@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>学生评价 · 教师端</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --primary:#1a5c8e;--primary-light:#e8f4fd;--primary-dark:#134566;
+  --success:#27ae60;--danger:#e74c3c;--warning:#e67e22;
+  --border:#d0dce8;--bg:#f0f4f8;--card:#fff;--text:#2c3e50;--label:#7f8c9a;
+  --radius:12px;--shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',sans-serif;padding-bottom:90px;min-height:100vh}
+
+/* 顶栏 */
+.topbar{background:var(--primary);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.topbar h1{font-size:16px;font-weight:600;letter-spacing:.5px}
+.topbar p{font-size:11px;opacity:.75;margin-top:2px}
+
+/* 步骤条 */
+.steps{display:flex;background:#fff;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.steps::-webkit-scrollbar{display:none}
+.step{flex:1;min-width:60px;text-align:center;padding:9px 4px;font-size:11px;color:var(--label);border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap;transition:.2s}
+.step.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.step.done{color:var(--success)}
+.step-n{display:inline-flex;width:18px;height:18px;border-radius:50%;background:var(--border);color:#fff;font-size:10px;align-items:center;justify-content:center;margin-bottom:2px}
+.step.active .step-n{background:var(--primary)}
+.step.done .step-n{background:var(--success)}
+
+/* 主内容 */
+.main{padding:14px;max-width:600px;margin:0 auto}
+.page{display:none;animation:fadeUp .25s}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* 卡片 */
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.card-h{font-size:14px;font-weight:600;color:var(--primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--primary-light);display:flex;align-items:center;gap:6px}
+.card-h::before{content:'';width:3px;height:14px;background:var(--primary);border-radius:2px;display:inline-block}
+
+/* 表单 */
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:12px;color:var(--label);margin-bottom:4px;font-weight:500}
+.fg input,.fg textarea,.fg select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;background:#fff}
+.fg input:focus,.fg textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,92,142,.08)}
+.fg textarea{min-height:75px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* 评分 */
+.score-row{margin-bottom:14px}
+.score-label{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px}
+.score-badge{background:var(--primary);color:#fff;padding:1px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.stars{display:flex;gap:5px}
+.star{width:38px;height:38px;border:none;background:none;cursor:pointer;font-size:26px;color:#ddd;transition:all .15s;padding:0;line-height:1;-webkit-tap-highlight-color:transparent}
+.star.on{color:#f1c40f;transform:scale(1.1)}
+
+/* 等级选择 */
+.level-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.lvl-btn{padding:7px 16px;border:1.5px solid var(--border);border-radius:20px;background:#fff;cursor:pointer;font-size:13px;transition:.2s;-webkit-tap-highlight-color:transparent}
+.lvl-btn.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+/* 上传区 */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:18px;text-align:center;cursor:pointer;background:var(--bg);transition:.2s;position:relative;margin-bottom:10px}
+.upload-zone:active{border-color:var(--primary);background:var(--primary-light)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:28px;margin-bottom:6px}
+.upload-txt{font-size:13px;color:var(--label)}
+.upload-hint{font-size:11px;color:#aab;margin-top:3px}
+
+/* 图片网格 */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.ph-item{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#eee}
+.ph-item img{width:100%;height:100%;object-fit:cover}
+.ph-del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.ph-cap{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:4px 6px}
+.ph-cap input{width:100%;background:transparent;border:none;color:#fff;font-size:10px;outline:none;font-family:inherit}
+.ph-cap input::placeholder{color:rgba(255,255,255,.65)}
+
+/* 底部按钮 */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:10px;z-index:49;box-shadow:0 -2px 8px rgba(0,0,0,.07)}
+.btn{flex:1;padding:12px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit}
+.btn-ghost{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:active{background:var(--primary-dark)}
+.btn-success{background:var(--success);color:#fff}
+
+/* Toast */
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-16px);background:rgba(0,0,0,.75);color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:9999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 成功页 */
+.success-page{text-align:center;padding:40px 20px}
+.success-icon{font-size:64px;margin-bottom:16px}
+.success-title{font-size:20px;font-weight:600;margin-bottom:8px}
+.success-sub{font-size:14px;color:var(--label);margin-bottom:28px}
+.btn-new{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:14px 36px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+
+/* loading 遮罩 */
+.loading-mask{position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9998;font-size:14px;color:var(--primary)}
+.spinner{width:36px;height:36px;border:3px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:400px){.row2{grid-template-columns:1fr}.photo-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📋 学生课堂评价</h1>
+  <p>教师端 · 填写后提交至管理系统</p>
+</div>
+
+<div class="steps" id="stepsBar">
+  <div class="step active" data-i="0" onclick="goPage(0)"><div><div class="step-n">1</div></div><div>基本信息</div></div>
+  <div class="step" data-i="1" onclick="goPage(1)"><div><div class="step-n">2</div></div><div>单项评价</div></div>
+  <div class="step" data-i="2" onclick="goPage(2)"><div><div class="step-n">3</div></div><div>单项证据</div></div>
+  <div class="step" data-i="3" onclick="goPage(3)"><div><div class="step-n">4</div></div><div>整体评价</div></div>
+  <div class="step" data-i="4" onclick="goPage(4)"><div><div class="step-n">5</div></div><div>整体证据</div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="loading-mask" id="loadingMask" style="display:none">
+  <div class="spinner"></div>
+  <div>正在提交，请稍候…</div>
+</div>
+
+<div class="main">
+
+  <!-- 页面0：基本信息 -->
+  <div class="page active" id="p0">
+    <div class="card">
+      <div class="card-h">基本信息</div>
+      <div class="fg">
+        <label>评价教师姓名 *</label>
+        <input id="teacherName" type="text" placeholder="请输入您的姓名">
+      </div>
+      <div class="row2">
+        <div class="fg">
+          <label>授课题目 *</label>
+          <input id="courseTitle" type="text" placeholder="如：《认识浮力》">
+        </div>
+        <div class="fg">
+          <label>评价日期 *</label>
+          <input id="evalDate" type="date">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fg">
+          <label>学生姓名 *</label>
+          <input id="studentName" type="text" placeholder="如：童理墨">
+        </div>
+        <div class="fg">
+          <label>学号/编号</label>
+          <input id="studentNo" type="text" placeholder="如：2号">
+        </div>
+      </div>
+      <div class="fg">
+        <label>班级 *</label>
+        <input id="studentClass" type="text" placeholder="如：八年级八班">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">评价环节</div>
+      <div class="fg">
+        <label>单项评价环节（聚焦的学习行为）</label>
+        <input id="singleEnv" type="text" placeholder="如：使用弹簧测力计测出浮力">
+      </div>
+      <div class="fg">
+        <label>单项证据来源</label>
+        <input id="singleEvidence" type="text" placeholder="如：课堂观察、实验数据">
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label>整体评价证据来源</label>
+        <input id="overallEvidence" type="text" placeholder="如：课堂观察、学习任务单">
+      </div>
+    </div>
+  </div>
+
+  <!-- 页面1：单项评价 -->
+  <div class="page" id="p1">
+    <div class="card">
+      <div class="card-h">单项评价打分</div>
+      <p style="font-size:12px;color:var(--label);margin-bottom:14px">聚焦学生学习行为的单项评价</p>
+      <div class="score-row" id="sg-操作规范性">
+        <div class="score-label"><span>操作规范性</span><span class="score-badge" id="sb-操作规范性">4 星</span></div>
+        <div class="stars" data-k="操作规范性">
+          <button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button>
+          <button class="star on" data-v="3">★</button><button class="star on" data-v="4">★</button>
+          <button class="star" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="score-row" id="sg-合作参与度">
+        <div class="score-label"><span>合作参与度</span><span class="score-badge" id="sb-合作参与度">3 星</span></div>
+        <div class="stars" data-k="合作参与度">
+          <button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button>
+          <button class="star on" data-v="3">★</button><button class="star" data-v="4">★</button>
+          <button class="star" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="score-row" id="sg-数据记录准确性">
+        <div class="score-label"><span>数据记录准确性</span><span class="score-badge" id="sb-数据记录准确性">3 星</span></div>
+        <div class="stars" data-k="数据记录准确性">
+          <button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button>
+          <button class="star on" data-v="3">★</button><button class="star" data-v="4">★</button>
+          <button class="star" data-v="5">★</button>
+        </div>
+      </div>
+      <div style="margin-top:4px">
+        <div class="score-label"><span>单项综合评级</span></div>
+        <div class="level-row" id="lvl-single">
+          <button class="lvl-btn" onclick="setLevel('single','未达标')">未达标</button>
+          <button class="lvl-btn on" onclick="setLevel('single','达标')">达标</button>
+          <button class="lvl-btn" onclick="setLevel('single','基本达标')">基本达标</button>
+          <button class="lvl-btn" onclick="setLevel('single','优秀')">优秀</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">单项评语</div>
+      <div class="fg" style="margin-bottom:0">
+        <textarea id="singleComment" placeholder="填写对该学生本评价环节的具体评语…" rows="4"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 页面2：单项证据 -->
+  <div class="page" id="p2">
+    <div class="card">
+      <div class="card-h">证据一：课堂观察照片</div>
+      <div class="upload-zone" id="uz-single-obs">
+        <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this,'single-obs')">
+        <div class="upload-icon">📸</div>
+        <div class="upload-txt">点击拍照 / 从相册选择</div>
+        <div class="upload-hint">可多选，支持 JPG/PNG</div>
+      </div>
+      <div class="photo-grid" id="pg-single-obs"></div>
+    </div>
+    <div class="card">
+      <div class="card-h">证据二：实验数据 / 作品</div>
+      <div class="upload-zone">
+        <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this,'single-data')">
+        <div class="upload-icon">📊</div>
+        <div class="upload-txt">拍摄实验记录、数据表</div>
+      </div>
+      <div class="photo-grid" id="pg-single-data"></div>
+    </div>
+  </div>
+
+  <!-- 页面3：整体评价 -->
+  <div class="page" id="p3">
+    <div class="card">
+      <div class="card-h">整体评价打分</div>
+      <p style="font-size:12px;color:var(--label);margin-bottom:14px">对学生整节课核心素养达成情况的整体性评价</p>
+      <div class="score-row">
+        <div class="score-label"><span>课堂参与度</span><span class="score-badge" id="sb-课堂参与度">4 星</span></div>
+        <div class="stars" data-k="课堂参与度">
+          <button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button>
+          <button class="star on" data-v="3">★</button><button class="star on" data-v="4">★</button>
+          <button class="star" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="score-label"><span>语言表达能力</span><span class="score-badge" id="sb-语言表达能力">4 星</span></div>
+        <div class="stars" data-k="语言表达能力">
+          <button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button>
+          <button class="star on" data-v="3">★</button><button class="star on" data-v="4">★</button>
+          <button class="star" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="score-label"><span>知识掌握程度</span><span class="score-badge" id="sb-知识掌握程度">4 星</span></div>
+        <div class="stars" data-k="知识掌握程度">
+          <button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button>
+          <button class="star on" data-v="3">★</button><button class="star on" data-v="4">★</button>
+          <button class="star" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="score-label"><span>科学思维与探究</span><span class="score-badge" id="sb-科学思维与探究">3 星</span></div>
+        <div class="stars" data-k="科学思维与探究">
+          <button class="star on" data-v="1">★</button><button class="star on" data-v="2">★</button>
+          <button class="star on" data-v="3">★</button><button class="star" data-v="4">★</button>
+          <button class="star" data-v="5">★</button>
+        </div>
+      </div>
+      <div style="margin-top:4px">
+        <div class="score-label"><span>整体综合评级</span></div>
+        <div class="level-row" id="lvl-overall">
+          <button class="lvl-btn" onclick="setLevel('overall','未达标')">未达标</button>
+          <button class="lvl-btn on" onclick="setLevel('overall','达标')">达标</button>
+          <button class="lvl-btn" onclick="setLevel('overall','基本达标')">基本达标</button>
+          <button class="lvl-btn" onclick="setLevel('overall','优秀')">优秀</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h">整体评语</div>
+      <div class="fg">
+        <textarea id="overallComment" placeholder="填写对该学生整节课学习情况的评价…" rows="4"></textarea>
+      </div>
+      <div class="fg" style="margin-bottom:0">
+        <label>课后交流摘要</label>
+        <textarea id="afterClassNote" placeholder="课后与学生交流的主要内容…" rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 页面4：整体证据 -->
+  <div class="page" id="p4">
+    <div class="card">
+      <div class="card-h">证据一：课堂观察</div>
+      <div class="upload-zone">
+        <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this,'overall-obs')">
+        <div class="upload-icon">📸</div>
+        <div class="upload-txt">点击拍照 / 从相册选择</div>
+      </div>
+      <div class="photo-grid" id="pg-overall-obs"></div>
+    </div>
+    <div class="card">
+      <div class="card-h">证据二：学习任务单</div>
+      <div class="upload-zone">
+        <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this,'overall-task')">
+        <div class="upload-icon">📝</div>
+        <div class="upload-txt">拍摄学习任务单</div>
+      </div>
+      <div class="photo-grid" id="pg-overall-task"></div>
+    </div>
+    <div class="card">
+      <div class="card-h">证据三：课后交流 / 检测单</div>
+      <div class="upload-zone">
+        <input type="file" accept="image/*" multiple capture="environment" onchange="addPhotos(this,'overall-after')">
+        <div class="upload-icon">🗣️</div>
+        <div class="upload-txt">拍摄课后交流或目标检测单</div>
+      </div>
+      <div class="photo-grid" id="pg-overall-after"></div>
+    </div>
+
+    <!-- 提交按钮 -->
+    <button class="btn btn-success" style="width:100%;padding:14px;border-radius:12px;font-size:16px;margin-bottom:4px" onclick="submitEval()">
+      ✅ 提交评价报告
+    </button>
+    <p style="text-align:center;font-size:11px;color:var(--label);margin-top:6px">提交后数据实时同步到管理后台</p>
+  </div>
+
+</div><!-- /main -->
+
+<!-- 成功弹层 -->
+<div id="successOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9990;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:36px 28px;text-align:center;max-width:320px;margin:20px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-size:56px;margin-bottom:12px">🎉</div>
+    <div style="font-size:18px;font-weight:600;margin-bottom:8px">提交成功！</div>
+    <div style="font-size:13px;color:var(--label);margin-bottom:24px">评价数据已保存到系统，<br>可在管理后台查看报告</div>
+    <button onclick="resetForm()" style="background:var(--primary);color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-right:8px">评价下一位</button>
+    <button onclick="document.getElementById('successOverlay').style.display='none'" style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 20px;font-size:15px;cursor:pointer;font-family:inherit">关闭</button>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-bar" id="bottomBar">
+  <button class="btn btn-ghost" id="prevBtn" onclick="prevPage()">← 上一步</button>
+  <button class="btn btn-primary" id="nextBtn" onclick="nextPage()">下一步 →</button>
+</div>
+
+<script>
+const TOTAL = 5;
+let curPage = 0;
+let scores = {'操作规范性':4,'合作参与度':3,'数据记录准确性':3,'课堂参与度':4,'语言表达能力':4,'知识掌握程度':4,'科学思维与探究':3};
+let levels = {single:'达标', overall:'达标'};
+let photos = {'single-obs':[],'single-data':[],'overall-obs':[],'overall-task':[],'overall-after':[]};
+
+// 初始化日期
+document.getElementById('evalDate').value = new Date().toISOString().split('T')[0];
+
+// ── 页面导航 ──
+function goPage(n) {
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===n));
+  document.querySelectorAll('.step').forEach((s,i)=>{
+    s.classList.remove('active','done');
+    if(i===n) s.classList.add('active');
+    if(i<n) s.classList.add('done');
+  });
+  curPage = n;
+  document.getElementById('prevBtn').style.opacity = n===0?'.35':'1';
+  const nb = document.getElementById('nextBtn');
+  if(n===TOTAL-1){ nb.textContent='提交 ✓'; nb.className='btn btn-success'; nb.onclick=submitEval; }
+  else { nb.textContent='下一步 →'; nb.className='btn btn-primary'; nb.onclick=nextPage; }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function nextPage(){ if(curPage<TOTAL-1) goPage(curPage+1); }
+function prevPage(){ if(curPage>0) goPage(curPage-1); }
+
+// ── 星级评分 ──
+document.querySelectorAll('.stars').forEach(grp=>{
+  grp.querySelectorAll('.star').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const k = grp.dataset.k;
+      const v = parseInt(btn.dataset.v);
+      scores[k] = v;
+      grp.querySelectorAll('.star').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.v)<=v));
+      const sb = document.getElementById('sb-'+k);
+      if(sb) sb.textContent = v+' 星';
+    });
+  });
+});
+
+// ── 等级选择 ──
+function setLevel(type, val) {
+  levels[type] = val;
+  const id = type==='single'?'lvl-single':'lvl-overall';
+  document.getElementById(id).querySelectorAll('.lvl-btn').forEach(b=>b.classList.toggle('on',b.textContent===val));
+}
+
+// ── 图片处理 ──
+function addPhotos(input, key) {
+  Array.from(input.files).forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      photos[key].push({src:e.target.result, caption:''});
+      renderGrid(key);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+function renderGrid(key) {
+  const el = document.getElementById('pg-'+key);
+  if(!el) return;
+  el.innerHTML='';
+  photos[key].forEach((p,i)=>{
+    const d=document.createElement('div'); d.className='ph-item';
+    d.innerHTML=`<img src="${p.src}"><button class="ph-del" onclick="delPhoto('${key}',${i})">×</button><div class="ph-cap"><input placeholder="添加说明" value="${p.caption}" onchange="photos['${key}'][${i}].caption=this.value"></div>`;
+    el.appendChild(d);
+  });
+}
+function delPhoto(key, idx) { photos[key].splice(idx,1); renderGrid(key); }
+
+// ── 提交 ──
+async function submitEval() {
+  const required = {
+    'teacherName':'评价教师姓名','courseTitle':'授课题目',
+    'studentName':'学生姓名','studentClass':'班级'
+  };
+  for(const [id,label] of Object.entries(required)){
+    if(!document.getElementById(id)?.value.trim()){ showToast('请填写：'+label); goPage(0); return; }
+  }
+  document.getElementById('loadingMask').style.display='flex';
+  const payload = {
+    teacherName: v('teacherName'), courseTitle: v('courseTitle'),
+    evalDate: v('evalDate'), studentName: v('studentName'),
+    studentNo: v('studentNo'), studentClass: v('studentClass'),
+    singleEval: {
+      env: v('singleEnv'), evidence: v('singleEvidence'),
+      scores: { '操作规范性':scores['操作规范性'], '合作参与度':scores['合作参与度'], '数据记录准确性':scores['数据记录准确性'] },
+      level: levels.single, comment: v('singleComment')
+    },
+    overallEval: {
+      evidence: v('overallEvidence'),
+      scores: { '课堂参与度':scores['课堂参与度'], '语言表达能力':scores['语言表达能力'], '知识掌握程度':scores['知识掌握程度'], '科学思维与探究':scores['科学思维与探究'] },
+      level: levels.overall, comment: v('overallComment'), afterClassNote: v('afterClassNote')
+    },
+    photos
+  };
+  try {
+    const resp = await fetch('/api/evaluate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    document.getElementById('loadingMask').style.display='none';
+    if(data.ok) {
+      document.getElementById('successOverlay').style.display='flex';
+    } else {
+      showToast('提交失败：'+data.error);
+    }
+  } catch(e) {
+    document.getElementById('loadingMask').style.display='none';
+    showToast('网络错误，请检查连接');
+  }
+}
+
+// ── 重置表单 ──
+function resetForm() {
+  document.getElementById('successOverlay').style.display='none';
+  ['teacherName','courseTitle','studentName','studentNo','studentClass','singleEnv','singleEvidence','overallEvidence','singleComment','overallComment','afterClassNote'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('evalDate').value = new Date().toISOString().split('T')[0];
+  scores = {'操作规范性':4,'合作参与度':3,'数据记录准确性':3,'课堂参与度':4,'语言表达能力':4,'知识掌握程度':4,'科学思维与探究':3};
+  levels = {single:'达标',overall:'达标'};
+  photos = {'single-obs':[],'single-data':[],'overall-obs':[],'overall-task':[],'overall-after':[]};
+  // 重置星星
+  document.querySelectorAll('.stars').forEach(grp=>{
+    const k = grp.dataset.k;
+    const v2 = scores[k]||3;
+    grp.querySelectorAll('.star').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.v)<=v2));
+    const sb=document.getElementById('sb-'+k); if(sb) sb.textContent=v2+' 星';
+  });
+  ['single','overall'].forEach(t=>setLevel(t,levels[t]));
+  Object.keys(photos).forEach(k=>renderGrid(k));
+  goPage(0);
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+function v(id){ return document.getElementById(id)?.value||''; }
+
+goPage(0);
+</script>
+</body>
+</html>
