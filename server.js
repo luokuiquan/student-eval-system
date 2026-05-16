@@ -263,4 +263,25 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🖥️  管理后台（PC）: http://[本机IP]:${PORT}/admin`);
   console.log(`☁️  云部署模式: ${IS_CLOUD ? '是' : '否'}`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+
+  // ── 自动保活（仅云部署时生效，防止 Render 15分钟无活动休眠） ──
+  if (IS_CLOUD) {
+    const KEEP_ALIVE_INTERVAL = 10 * 60 * 1000; // 每10分钟
+    setInterval(() => {
+      const options = {
+        hostname: 'localhost',
+        port: PORT,
+        path: '/api/health',
+        method: 'GET'
+      };
+      const req = http.request(options, (res) => {
+        console.log(`[保活] ${new Date().toISOString()} - 状态码: ${res.statusCode}`);
+      });
+      req.on('error', (e) => {
+        console.error(`[保活] 请求失败: ${e.message}`);
+      });
+      req.end();
+    }, KEEP_ALIVE_INTERVAL);
+    console.log('🔄 自动保活已启动（每10分钟自检一次）');
+  }
 });
